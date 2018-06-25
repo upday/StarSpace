@@ -373,7 +373,7 @@ void StarSpace::printDoc(ostream& ofs, const vector<Base>& tokens) {
       ofs << dict_->getSymbol(t.first) << ' ';
     }
   }
-  ofs << endl;
+  //ofs << endl;
 }
 
 void StarSpace::evaluate() {

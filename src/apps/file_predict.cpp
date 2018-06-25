@@ -75,10 +75,10 @@ int main(int argc, char** argv) {
     sp.parseDoc(vec.at(1), query_vec, " ");
     vector<Predictions> predictions;
     sp.predictOne(query_vec, predictions);
-    for (int i = 0; i < predictions.size() || i < 5; i++) {
+    for (int i = 0; i < predictions.size(); i++) {
       //cout << i << "[" << predictions[i].first << "]: ";
-      // FIXME, cout cannot print a vector like this
-      //cout << "\t" << sp.baseDocs_[predictions[i].second];
+      cout << "\t";
+      sp.printDoc(cout, sp.baseDocs_[predictions[i].second]);
     }
     cout << "\n";
   }
