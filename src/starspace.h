@@ -16,6 +16,7 @@
 #include "doc_parser.h"
 #include "model.h"
 #include "utils/utils.h"
+#include <utility>
 
 namespace starspace {
 
@@ -40,7 +41,10 @@ class StarSpace {
         const std::string& line,
         std::vector<Base>& ids,
         const std::string& sep);
-
+    void parseDoc(
+        const std::string& line,
+        std::pair<std::string, std::vector<Base>>& ids,
+        const std::string& sep);
     void nearestNeighbor(const std::string& line, int k);
 
     void saveModel(const std::string& filename);
@@ -50,13 +54,19 @@ class StarSpace {
     const std::string kMagic = "STARSPACE-2017-2";
 
     void loadBaseDocs();
+    void loadBaseDocsWithDocIds();
     
     void predictOne(
         const std::vector<Base>& input,
         std::vector<Predictions>& pred);
 
+    void predictOneWithDocId(
+        const std::vector<Base>& input,
+        std::vector<Predictions>& pred);
+
     std::shared_ptr<Args> args_;
     std::vector<std::vector<Base>> baseDocs_;
+    std::vector<std::pair<std::string, std::vector<Base>>> idBaseDocs_;
   private:
     void initParser();
     void initDataHandler();
@@ -75,6 +85,7 @@ class StarSpace {
     std::shared_ptr<EmbedModel> model_;
 
     std::vector<Matrix<Real>> baseDocVectors_;
+    std::vector<std::pair<std::string, Matrix<Real>>> idBaseDocVectors_;
 };
 
 }

@@ -23,24 +23,17 @@ using namespace starspace;
 
 int main(int argc, char** argv) {
   shared_ptr<Args> args = make_shared<Args>();
-  if (argc < 3) {
-    cerr << "usage: " << argv[0] << " <model> k [basedoc]\n";
+  if (argc < 6) {
+    cerr << "usage: " << argv[0] << " <model> k basedoc input_docs predictions_file\n";
     return 1;
   }
   std::string model(argv[1]);
   args->K = atoi(argv[2]);
   args->model = model;
-  if (argc > 3) {
-    args->fileFormat = "labelDoc";
-    args->basedoc = argv[3];
-  }
-
-  string input_file;
-  if (argc > 4) {
-     input_file = argv[4];
-  } else {
-     input_file = "data.tsv";
-  }
+  args->fileFormat = "labelDoc";
+  args->basedoc = argv[3];
+  string input_file(argv[4]);
+  string output_file(argv[5]);
 
   StarSpace sp(args);
   if (boost::algorithm::ends_with(args->model, ".tsv")) {
@@ -54,10 +47,9 @@ int main(int argc, char** argv) {
   sp.args_->dropoutLHS = 0.0;
   sp.args_->dropoutRHS = 0.0;
   // Load basedocs which are set of possible things to predict.
-  sp.loadBaseDocs();
+  sp.loadBaseDocsWithDocIds();
 
-  string data(input_file);
-  ifstream in(data.c_str());
+  ifstream in(input_file.c_str());
   if (!in.is_open()) return 1;
 
   typedef boost::tokenizer< boost::escaped_list_separator<char> > Tokenizer;
@@ -65,23 +57,28 @@ int main(int argc, char** argv) {
   vector<string> vec;
   string line;
 
+  ofstream out(output_file.c_str());
+  if (!out.is_open()) return 1;
+
   while(getline(in, line)) {
     // Do the prediction
     Tokenizer tok(line, Separator);
     vec.assign(tok.begin(), tok.end());
 
-    cout <<  vec.at(0);
+    out << vec.at(0);
     vector<Base> query_vec;
     sp.parseDoc(vec.at(1), query_vec, " ");
     vector<Predictions> predictions;
-    sp.predictOne(query_vec, predictions);
+    sp.predictOneWithDocId(query_vec, predictions);
     for (int i = 0; i < predictions.size(); i++) {
-      //cout << i << "[" << predictions[i].first << "]: ";
-      cout << "\t";
-      sp.printDoc(cout, sp.baseDocs_[predictions[i].second]);
+      out << "\t";
+      out << sp.idBaseDocs_[predictions[i].second].first;
     }
-    cout << "\n";
+    out << "\n";
   }
+
+  in.close();
+  out.close();
 
   return 0;
 }

@@ -211,6 +211,23 @@ void StarSpace::parseDoc(
   parser_->parse(tokens, ids);
 }
 
+void StarSpace::parseDoc(
+    const string& line,
+    pair< string, vector<Base> >& ids,
+    const string& sep) {
+
+  // splitting article_id\tarticle_text and putting article_id into the first
+  // element of the pair.
+  // XXX fix record management
+  vector<string> record;
+  boost::split(record, line, boost::is_any_of(string("\t")));
+  ids.first = record.front();
+
+  vector<string> tokens;
+  boost::split(tokens, record.back(), boost::is_any_of(string(sep)));
+  parser_->parse(tokens, ids);
+}
+
 Matrix<Real> StarSpace::getDocVector(const string& line, const string& sep) {
   vector<Base> ids;
   parseDoc(line, ids, sep);
@@ -287,6 +304,36 @@ void StarSpace::loadBaseDocs() {
   }
 }
 
+void StarSpace::loadBaseDocsWithDocIds() {
+  if (args_->basedoc.empty()) {
+    if (args_->fileFormat == "labelDoc") {
+      std::cerr << "Must provide base labels when label is featured.\n";
+      exit(EXIT_FAILURE);
+    }
+  } else {
+    cout << "Loading base docs from file : " << args_->basedoc << endl;
+    ifstream fin(args_->basedoc);
+    if (!fin.is_open()) {
+      std::cerr << "Base doc file cannot be opened for loading!" << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    string line;
+    while (getline(fin, line)) {
+      pair< string, vector<Base> > ids;
+      parseDoc(line, ids, "\t ");
+      idBaseDocs_.push_back(ids);
+      auto docVec = model_->projectRHS(ids.second);
+      idBaseDocVectors_.push_back(make_pair(ids.first, docVec));
+    }
+    fin.close();
+    if (idBaseDocVectors_.size() == 0) {
+      std::cerr << "ERROR: basedoc file '" << args_->basedoc << "' is empty." << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    cout << "Finished loading " << idBaseDocVectors_.size() << " base docs.\n";
+  }
+}
+
 void StarSpace::predictOne(
     const vector<Base>& input,
     vector<Predictions>& pred) {
@@ -294,6 +341,24 @@ void StarSpace::predictOne(
   std::priority_queue<Predictions> heap;
   for (int i = 0; i < baseDocVectors_.size(); i++) {
     auto cur_score = model_->similarity(lhsM, baseDocVectors_[i]);
+    heap.push({ cur_score, i });
+  }
+  // get the first K predictions
+  int i = 0;
+  while (i < args_->K && heap.size() > 0) {
+    pred.push_back(heap.top());
+    heap.pop();
+    i++;
+  }
+}
+
+void StarSpace::predictOneWithDocId(
+    const vector<Base>& input,
+    vector<Predictions>& pred) {
+  auto lhsM = model_->projectLHS(input);
+  std::priority_queue<Predictions> heap;
+  for (int i = 0; i < idBaseDocVectors_.size(); i++) {
+    auto cur_score = model_->similarity(lhsM, idBaseDocVectors_[i].second);
     heap.push({ cur_score, i });
   }
   // get the first K predictions

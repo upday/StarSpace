@@ -34,6 +34,7 @@
 #include "dict.h"
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace starspace {
 
@@ -67,6 +68,10 @@ public:
   bool parse(
       const std::vector<std::string>& tokens,
       std::vector<Base>& rslt);
+
+  bool parse(
+      const std::vector<std::string>& tokens,
+      std::pair< std::string, std::vector<Base>>& rslts);
 
   bool parse(
       const std::vector<std::string>& tokens,
