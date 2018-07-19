@@ -110,6 +110,9 @@ query_predict: $(OBJS)
 file_predict: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(INCLUDES) -g src/apps/file_predict.cpp -o file_predict
 
+doc_predict: $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) $(INCLUDES) -g src/apps/doc_predict.cpp -o doc_predict
+
 print_ngrams: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(INCLUDES) -g src/apps/print_ngrams.cpp -o print_ngrams
 
