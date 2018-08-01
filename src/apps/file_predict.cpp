@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
     out << vec.at(0);
     vector<Base> query_vec;
-    sp.parseDoc(vec.at(1), query_vec, " ");
+    sp.parseDoc(vec.at(2), query_vec, " ");
     vector<Predictions> predictions;
     sp.predictOneWithDocId(query_vec, predictions);
     for (int i = 0; i < predictions.size(); i++) {

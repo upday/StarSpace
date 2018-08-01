@@ -216,8 +216,8 @@ void StarSpace::parseDoc(
     pair< string, vector<Base> >& ids,
     const string& sep) {
 
-  // splitting article_id\tarticle_text and putting article_id into the first
-  // element of the pair.
+  // splitting article_id\tpublished_at\tarticle_text and putting article_id
+  // into the first element of the pair.
   // XXX fix record management
   vector<string> record;
   boost::split(record, line, boost::is_any_of(string("\t")));
