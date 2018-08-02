@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
       out << "\t";
       out << sp.idBaseDocs_[predictions[i].second].first;
     }
-    out << "\n";
+    out << "\n" << std::flush;
   }
 
   in.close();
