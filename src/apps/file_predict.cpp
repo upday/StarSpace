@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     Tokenizer tok(line, Separator);
     vec.assign(tok.begin(), tok.end());
 
-    out << vec.at(0);
+    out << vec.at(0) << "\t" << vec.at(1);
     vector<Base> query_vec;
     sp.parseDoc(vec.at(2), query_vec, " ");
     vector<Predictions> predictions;
