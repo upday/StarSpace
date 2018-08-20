@@ -60,6 +60,9 @@ int main(int argc, char** argv) {
   ofstream out(output_file.c_str());
   if (!out.is_open()) return 1;
 
+  cout << "Starting prediction phase..." << endl;
+
+  int total_predictions = 0;
   while(getline(in, line)) {
     // Do the prediction
     Tokenizer tok(line, Separator);
@@ -75,10 +78,15 @@ int main(int argc, char** argv) {
       out << sp.idBaseDocs_[predictions[i].second].first;
     }
     out << "\n" << std::flush;
+
+    total_predictions++;
   }
 
   in.close();
   out.close();
+
+  cout << total_predictions << " predictions completed successfully." << endl;
+  cout << "A-OK" << endl << endl;
 
   return 0;
 }
