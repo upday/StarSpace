@@ -1,10 +1,8 @@
 /**
- * Copyright (c) 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -24,11 +22,13 @@ class Args {
     std::string model;
     std::string initModel;
     std::string fileFormat;
+    std::string compressFile;
     std::string label;
     std::string basedoc;
     std::string loss;
     std::string similarity;
 
+    char weightSep;
     double lr;
     double termLr;
     double norm;
@@ -42,6 +42,7 @@ class Args {
     int epoch;
     int ws;
     int maxTrainTime;
+    int validationPatience;
     int thread;
     int maxNegSamples;
     int negSearchLimit;
@@ -51,6 +52,8 @@ class Args {
     int ngrams;
     int trainMode;
     int K;
+    int batchSize;
+    int numGzFile;
     bool verbose;
     bool debug;
     bool adagrad;

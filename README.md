@@ -9,7 +9,7 @@ StarSpace is a general-purpose neural model for efficient learning of entity emb
 - Metric/similarity learning, e.g. learning sentence or document similarity.
 - Content-based or Collaborative filtering-based Recommendation, e.g. recommending music or videos.
 - Embedding graphs, e.g. multi-relational graphs such as Freebase.
-- <img width="5%" src="examples/new2.gif" /> Image classification, ranking or retrieval (e.g. by using existing ResNet features).
+- Image classification, ranking or retrieval (e.g. by using existing ResNet features).
 
 In the general case, it learns to represent objects of different types into a common vectorial embedding space,
 hence the star ('*', wildcard) and space in the name, and in that space compares them against each other.
@@ -18,14 +18,17 @@ It learns to rank a set of entities/documents or objects given a query entity/do
 See the [paper](https://arxiv.org/abs/1709.03856) for more details on how it works.
 
 # News
-- New license and patents: now StarSpace is under BSD license. Checkout <a href="https://github.com/facebookresearch/StarSpace/blob/master/LICENSE.md">LICENSE</a> and <a href="https://github.com/facebookresearch/StarSpace/blob/master/PATENTS">PATENTS</a> for details.
+- <img width="5%" src="examples/new2.gif"> StarSpace is available in Python: check out the <a href="https://github.com/facebookresearch/StarSpace#building-starspace">Building StarSpace</a> section for details. 
+- <img width="5%" src="examples/new2.gif"> Support reading from compressed file: check out the <a href="https://github.com/facebookresearch/StarSpace/#compressed-file">Compressed File</a> section for more details.
+- <img width="5%" src="examples/new2.gif"> New license and patents: now StarSpace is under MIT license. Checkout <a href="https://github.com/facebookresearch/StarSpace/blob/master/LICENSE.md">LICENSE</a> for details.
+- StarSpace training is much faster now with mini batch training (setting batch size by "-batchSize" argument). Details in [#190](https://github.com/facebookresearch/StarSpace/pull/190).
 - We added support for real-valued input and label weights: checkout the <a href="https://github.com/facebookresearch/StarSpace/#file-format">File Format</a> and <a href="https://github.com/facebookresearch/StarSpace/#imagespace-learning-image-and-label-embeddings">ImageSpace</a> section for more details on how to use weights in input and label.
 
 # Requirements
 
-StarSpace builds on modern Mac OS and Linux distributions. Since it uses C++11 features, it requires a compiler with good C++11 support. These include :
+StarSpace builds on modern Mac OS, Windows, and Linux distributions. Since it uses C++11 features, it requires a compiler with good C++11 support. These include :
 
-* (gcc-4.6.3 or newer) or (clang-3.3 or newer)
+* (gcc-4.6.3 or newer), (Visual Studio 2015), or (clang-3.3 or newer) 
 
 Compilation is carried out using a Makefile, so you will need to have a working **make**.
 
@@ -39,11 +42,16 @@ Optional: if one wishes to run the unit tests in src directory, <a href=https://
 
 # Building StarSpace
 
-In order to build StarSpace, use the following:
+In order to build StarSpace on Mac OS or Linux, use the following:
 
     git clone https://github.com/facebookresearch/Starspace.git
     cd Starspace
     make
+
+In order to build StarSpace on Windows, open the following in Visual Studio:
+
+    MVS\StarSpace.sln
+In order to build StarSpace python wrapper, please refer <a href="https://github.com/facebookresearch/StarSpace/tree/master/python">README</a> inside the directory <a href="https://github.com/facebookresearch/StarSpace/tree/master/python">python</a>.
 
 # File Format
 
@@ -80,6 +88,27 @@ e.g.,
     dog:0.1 cat:0.5 ...
     
 The default weight is 1 for any word / label that does not contain weights. 
+
+# Compressed File
+
+StarSpace can also read from compressed file (currently only support gzip files). You can skip this part if you do not plan to use compressed input files. To run StarSpace with compressed input, first compile StarSpace using makefile_compress instead of makefile:
+
+    make -f makefile_compress
+
+Then in the train config, specify
+    
+    ./starspace -trainFile input -compressFile gzip -numGzFile 10 ...
+    
+It assumes that there are input files with names 
+
+    input00.gz, input01.gz, ..., input09.gz 
+    
+and reads from those files.
+
+To prepare data in this format, one can use the standard 'split' function to first split input file into multiple chunks, then compress them. For instance:
+
+    split -d -l xxx original_input.txt input && gzip input*
+
 
 ## Training Mode
 
@@ -241,7 +270,7 @@ With the most recent update, StarSpace can also be used to learn joint embedding
 
 Here we give an example using <a href="https://www.cs.toronto.edu/~kriz/cifar.html">CIFAR-10</a> to illustrate how we train images with other entities (in this example, image class): we train a <a href="https://github.com/facebookresearch/ResNeXt">ResNeXt</a> model on CIFAR-10  which achieves 96.34% accuracy on test dataset, and use the last layer of ResNeXt as the features for each image. We embed 10 image classes together with image features in the same space using StarSpace. For an example image from class 1 with last layer (0.8, 0.5, ..., 1.2), we convert it to the following format:
     
-    d1:0.8  d2:0.5   ...    d1024:1.2   __label__1
+    d0:0.8  d1:0.5   ...    d1023:1.2   __label__1
 
 After converting train and test examples of CIFAR-10 to the above format, we ran <a href="https://github.com/facebookresearch/StarSpace/blob/master/examples/image_feature_example_cifar10.sh">this example script</a>:
 
@@ -251,8 +280,8 @@ and achieved 96.40% accuracy on an average of 5 runs.
 
 # Full Documentation of Parameters
     
-    Run "starspace train ..." or "starspace test ..."
-    
+    Run "starspace train ..."  or "starspace test ..."
+
     The following arguments are mandatory for train: 
       -trainFile       training file path
       -model           output model file path
@@ -272,6 +301,8 @@ and achieved 96.40% accuracy on an average of 5 runs.
       -initModel       if not empty, it loads a previously trained model in -initModel and carry on training.
       -trainMode       takes value in [0, 1, 2, 3, 4, 5], see Training Mode Section. [0]
       -fileFormat      currently support 'fastText' and 'labelDoc', see File Format Section. [fastText]
+      -validationFile  validation file path
+      -validationPatience    number of iterations of validation where does not improve before we stop training [10]
       -saveEveryEpoch  save intermediate models after each epoch [false]
       -saveTempModel   save intermediate models after each epoch with an unique name including epoch number [false]
       -lr              learning rate [0.01]
@@ -293,12 +324,14 @@ and achieved 96.40% accuracy on an average of 5 runs.
       -initRandSd      initial values of embeddings are randomly generated from normal distribution with mean=0, standard deviation=initRandSd. [0.001]
       -trainWord       whether to train word level together with other tasks (for multi-tasking). [0]
       -wordWeight      if trainWord is true, wordWeight specifies example weight for word level training examples. [0.5]
+      -batchSize       size of mini batch in training. [5]
 
     The following arguments for test are optional:
       -basedoc         file path for a set of labels to compare against true label. It is required when -fileFormat='labelDoc'.
                        In the case -fileFormat='fastText' and -basedoc is not provided, we compare true label with all other labels in the dictionary.
       -predictionFile  file path for save predictions. If not empty, top K predictions for each example will be saved.
       -K               if -predictionFile is not empty, top K predictions for each example will be saved.
+      -excludeLHS      exclude elements in the LHS from predictions
 
     The following arguments are optional:
       -normalizeText   whether to run basic text preprocess for input files [0]

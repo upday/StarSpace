@@ -1,10 +1,8 @@
 /**
- * Copyright (c) 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -25,7 +23,7 @@
 namespace starspace {
 
 typedef float Real;
-typedef boost::numeric::ublas::matrix_row<typeof(Matrix<Real>::matrix)>
+typedef boost::numeric::ublas::matrix_row<decltype(Matrix<Real>::matrix)>
   MatrixRow;
 typedef boost::numeric::ublas::vector<Real> Vector;
 
@@ -54,35 +52,26 @@ public:
 		       0.0, 0.0, false);
   }
 
-  float trainOneExample(
-      std::shared_ptr<InternDataHandler> data,
-      const ParseResults& s,
-      int negSearchLimit,
-      Real rate,
-      bool trainWord = false);
-
-  float trainOne(std::shared_ptr<InternDataHandler> data,
-                 const std::vector<Base>& items,
-                 const std::vector<Base>& labels,
-                 size_t maxNegSamples,
+  float trainOneBatch(std::shared_ptr<InternDataHandler> data,
+                 const std::vector<ParseResults>& batch_exs,
+                 size_t negSearchLimits,
                  Real rate,
                  bool trainWord = false);
 
-  float trainNLL(std::shared_ptr<InternDataHandler> data,
-                 const std::vector<Base>& items,
-                 const std::vector<Base>& labels,
+  float trainNLLBatch(std::shared_ptr<InternDataHandler> data,
+                 const std::vector<ParseResults>& batch_exs,
                  int32_t negSearchLimit,
                  Real rate,
                  bool trainWord = false);
 
-  void backward(const std::vector<Base>& items,
-                const std::vector<Base>& labels,
+  void backward(const std::vector<ParseResults>& batch_exs,
                 const std::vector<std::vector<Base>>& negLabels,
-                Matrix<Real>& gradW,
-                Matrix<Real>& lhs,
+                std::vector<Matrix<Real>> gradW,
+                std::vector<Matrix<Real>> lhs,
+                const std::vector<int>& num_negs,
                 Real rate_lhs,
-                Real rate_rhsP,
-                const std::vector<Real>& rate_rhsN);
+                const std::vector<Real>& rate_rhsP,
+                const std::vector<std::vector<Real>>& nRate);
 
   // Querying
   std::vector<std::pair<int32_t, Real>>
@@ -184,8 +173,8 @@ private:
 
   static void check(const boost::numeric::ublas::matrix<Real>& m) {
     if (!debug) return;
-    for (int i = 0; i < m.size1(); i++) {
-      for (int j = 0; j < m.size2(); j++) {
+    for (unsigned int i = 0; i < m.size1(); i++) {
+      for (unsigned int j = 0; j < m.size2(); j++) {
         assert(!std::isnan(m(i, j)));
         assert(!std::isinf(m(i, j)));
       }

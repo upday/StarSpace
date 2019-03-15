@@ -1,10 +1,8 @@
 /**
- * Copyright (c) 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 
@@ -55,10 +53,10 @@ void DataParser::parseForDict(
   chomp(line);
   vector<string> toks;
   boost::split(toks, line, boost::is_any_of(string(sep)));
-  for (int i = 0; i < toks.size(); i++) {
+  for (unsigned int i = 0; i < toks.size(); i++) {
     string token = toks[i];
     if (args_->useWeight) {
-      std::size_t pos = toks[i].find(":");
+      std::size_t pos = toks[i].find(args_->weightSep);
       if (pos != std::string::npos) {
         token = toks[i].substr(0, pos);
       }
@@ -100,9 +98,9 @@ void DataParser::addNgrams(
     }
   }
 
-  for (int32_t i = 0; i < hashes.size(); i++) {
+  for (int32_t i = 0; i < (int32_t)(hashes.size()); i++) {
     uint64_t h = hashes[i];
-    for (int32_t j = i + 1; j < hashes.size() && j < i + n; j++) {
+    for (int32_t j = i + 1; j < (int32_t)(hashes.size()) && j < i + n; j++) {
       h = h * Dictionary::HASH_C + hashes[j];
       int64_t id = h % args_->bucket;
       line.push_back(make_pair(dict_->nwords() + dict_->nlabels() + id, 1.0));
@@ -116,7 +114,7 @@ bool DataParser::parse(
 
   for (auto &token: tokens) {
     if (token.find("__weight__") != std::string::npos) {
-      std::size_t pos = token.find(":");
+      std::size_t pos = token.find(args_->weightSep);
       if (pos != std::string::npos) {
         rslts.weight = atof(token.substr(pos + 1).c_str());
       }
@@ -125,7 +123,7 @@ bool DataParser::parse(
     string t = token;
     float weight = 1.0;
     if (args_->useWeight) {
-      std::size_t pos = token.find(":");
+      std::size_t pos = token.find(args_->weightSep);
       if (pos != std::string::npos) {
         t = token.substr(0, pos);
         weight = atof(token.substr(pos + 1).c_str());
@@ -164,7 +162,7 @@ bool DataParser::parse(
     auto t = token;
     float weight = 1.0;
     if (args_->useWeight) {
-      std::size_t pos = token.find(":");
+      std::size_t pos = token.find(args_->weightSep);
       if (pos != std::string::npos) {
         t = token.substr(0, pos);
         weight = atof(token.substr(pos + 1).c_str());
@@ -179,10 +177,8 @@ bool DataParser::parse(
       continue;
     }
 
-    entry_type type = dict_->getType(wid);
-    if (type == entry_type::word) {
-      rslts.push_back(make_pair(wid, weight));
-    }
+    //entry_type type = dict_->getType(wid);
+    rslts.push_back(make_pair(wid, weight));
   }
 
   if (args_->ngrams > 1) {

@@ -1,10 +1,8 @@
 #
-# Copyright (c) 2016-present, Facebook, Inc.
-# All rights reserved.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree. An additional grant
-# of patent rights can be found in the PATENTS file in the same directory.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 #
 
 CXX = g++
@@ -57,7 +55,7 @@ normalize.o: src/utils/normalize.cpp src/utils/normalize.h
 	$(CXX) $(CXXFLAGS) -g -c src/utils/normalize.cpp
 
 dict.o: src/dict.cpp src/dict.h src/utils/args.h
-	$(CXX) $(CXXFLAGS) -g -c src/dict.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -g -c src/dict.cpp
 
 args.o: src/utils/args.cpp src/utils/args.h
 	$(CXX) $(CXXFLAGS) -g -c src/utils/args.cpp
@@ -81,13 +79,13 @@ proj_test: proj.o proj_test.o gtest_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 data.o: parser.o src/data.cpp src/data.h
-	$(CXX) $(CXXFLAGS) -g -c src/data.cpp -o data.o
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -g -c src/data.cpp -o data.o
 
 utils.o: src/utils/utils.cpp src/utils/utils.h
-	$(CXX) $(CXXFLAGS) -g -c src/utils/utils.cpp -o utils.o
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -g -c src/utils/utils.cpp -o utils.o
 
 doc_data.o: doc_parser.o data.o src/doc_data.cpp src/doc_data.h
-	$(CXX) $(CXXFLAGS) -g -c src/doc_data.cpp -o doc_data.o
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -g -c src/doc_data.cpp -o doc_data.o
 
 parser.o: dict.o src/parser.cpp src/parser.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -g -c src/parser.cpp -o parser.o

@@ -1,18 +1,15 @@
 /**
- * Copyright (c) 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
-
 #include "data.h"
-#include "utils/utils.h"
 #include <string>
 #include <vector>
 #include <fstream>
+#include <numeric>
 #include <assert.h>
 
 using namespace std;
@@ -39,26 +36,41 @@ void InternDataHandler::loadFromFile(
   const string& fileName,
   shared_ptr<DataParser> parser) {
 
-  ifstream fin(fileName);
-  if (!fin.is_open()) {
-    std::cerr << fileName << " cannot be opened for loading!" << std::endl;
-    exit(EXIT_FAILURE);
-  }
-  fin.close();
-
-  cout << "Loading data from file : " << fileName << endl;
   vector<Corpus> corpora(args_->thread);
-  foreach_line(
-    fileName,
-    [&](std::string& line) {
-      auto& corpus = corpora[getThreadID()];
-      ParseResults example;
-      if (parser->parse(line, example)) {
-        corpus.push_back(example);
-      }
-    },
-    args_->thread
-  );
+  if (args_->compressFile == "gzip") {
+    foreach_line_gz(
+      fileName,
+      args_->numGzFile,
+      [&](std::string& line) {
+        auto& corpus = corpora[getThreadID()];
+        ParseResults example;
+        if (parser->parse(line, example)) {
+          corpus.push_back(example);
+        }
+      },
+      args_->thread
+    );
+  } else {
+    ifstream fin(fileName);
+    if (!fin.is_open()) {
+      std::cerr << fileName << " cannot be opened for loading!" << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    fin.close();
+
+    cout << "Loading data from file : " << fileName << endl;
+    foreach_line(
+      fileName,
+      [&](std::string& line) {
+        auto& corpus = corpora[getThreadID()];
+        ParseResults example;
+        if (parser->parse(line, example)) {
+          corpus.push_back(example);
+        }
+      },
+      args_->thread
+    );
+  }
   // Glue corpora together.
   auto totalSize = std::accumulate(corpora.begin(), corpora.end(), size_t(0),
                      [](size_t l, Corpus& r) { return l + r.size(); });
@@ -100,7 +112,7 @@ void InternDataHandler::convert(
     if (args_->trainMode == 1) {
       // pick one random label as rhs and the rest is lhs
       auto idx = rand() % example.RHSTokens.size();
-      for (int i = 0; i < example.RHSTokens.size(); i++) {
+      for (unsigned int i = 0; i < example.RHSTokens.size(); i++) {
         auto tok = example.RHSTokens[i];
         if (i == idx) {
           rslt.RHSTokens.push_back(tok);
@@ -112,7 +124,7 @@ void InternDataHandler::convert(
     if (args_->trainMode == 2) {
       // pick one random label as lhs and the rest is rhs
       auto idx = rand() % example.RHSTokens.size();
-      for (int i = 0; i < example.RHSTokens.size(); i++) {
+      for (unsigned int i = 0; i < example.RHSTokens.size(); i++) {
         auto tok = example.RHSTokens[i];
         if (i == idx) {
           rslt.LHSTokens.push_back(tok);
@@ -124,7 +136,7 @@ void InternDataHandler::convert(
     if (args_->trainMode == 3) {
       // pick two random labels, one as lhs and the other as rhs
       auto idx = rand() % example.RHSTokens.size();
-      int idx2;
+      unsigned int idx2;
       do {
         idx2 = rand() % example.RHSTokens.size();
       } while (idx2 == idx);
@@ -144,14 +156,14 @@ void InternDataHandler::getWordExamples(
     vector<ParseResults>& rslts) const {
 
   rslts.clear();
-  for (int widx = 0; widx < doc.size(); widx++) {
+  for (int widx = 0; widx < (int)(doc.size()); widx++) {
     ParseResults rslt;
     rslt.LHSTokens.clear();
     rslt.RHSTokens.clear();
     rslt.RHSTokens.push_back(doc[widx]);
-    for (int i = max(widx - args_->ws, 0);
+    for (unsigned int i = max(widx - args_->ws, 0);
          i < min(size_t(widx + args_->ws), doc.size()); i++) {
-      if (i != widx) {
+      if ((int)i != widx) {
         rslt.LHSTokens.push_back(doc[i]);
       }
     }
@@ -217,7 +229,7 @@ void InternDataHandler::getNextKExamples(int K, vector<ParseResults>& c) {
 void InternDataHandler::getRandomWord(vector<Base>& result) {
   result.push_back(word_negatives_[word_iter_]);
   word_iter_++;
-  if (word_iter_ >= word_negatives_.size()) {
+  if (word_iter_ >= (int)word_negatives_.size()) {
     word_iter_ = 0;
   }
 }
@@ -244,9 +256,9 @@ void InternDataHandler::getRandomRHS(vector<Base>& results) const {
   assert(size_ > 0);
   results.clear();
   auto& ex = examples_[rand() % size_];
-  int r = rand() % ex.RHSTokens.size();
+  unsigned int r = rand() % ex.RHSTokens.size();
   if (args_->trainMode == 2) {
-    for (int i = 0; i < ex.RHSTokens.size(); i++) {
+    for (unsigned int i = 0; i < ex.RHSTokens.size(); i++) {
       if (i != r) {
         results.push_back(ex.RHSTokens[i]);
       }

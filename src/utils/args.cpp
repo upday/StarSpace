@@ -1,10 +1,8 @@
 /**
- * Copyright (c) 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "args.h"
@@ -33,12 +31,14 @@ Args::Args() {
   epoch = 5;
   ws = 5;
   maxTrainTime = 60*60*24*100;
+  validationPatience = 10;
   thread = 10;
   maxNegSamples = 10;
   negSearchLimit = 50;
   minCount = 1;
   minCountLabel = 1;
   K = 5;
+  batchSize = 5;
   verbose = false;
   debug = false;
   adagrad = true;
@@ -57,6 +57,8 @@ Args::Args() {
   useWeight = false;
   trainWord = false;
   excludeLHS = false;
+  weightSep = ':';
+  numGzFile = 1;
 }
 
 bool Args::isTrue(string arg) {
@@ -118,8 +120,14 @@ void Args::parseArgs(int argc, char** argv) {
       initModel = string(argv[i + 1]);
     } else if (strcmp(argv[i], "-fileFormat") == 0) {
       fileFormat = string(argv[i + 1]);
+    } else if (strcmp(argv[i], "-compressFile") == 0) {
+      compressFile = string(argv[i + 1]);
+    } else if (strcmp(argv[i], "-numGzFile") == 0) {
+      numGzFile = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-label") == 0) {
       label = string(argv[i + 1]);
+    } else if (strcmp(argv[i], "-weightSep") == 0) {
+      weightSep = argv[i + 1][0];
     } else if (strcmp(argv[i], "-loss") == 0) {
       loss = string(argv[i + 1]);
     } else if (strcmp(argv[i], "-similarity") == 0) {
@@ -150,6 +158,8 @@ void Args::parseArgs(int argc, char** argv) {
       ws = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-maxTrainTime") == 0) {
       maxTrainTime = atoi(argv[i + 1]);
+    } else if (strcmp(argv[i], "-validationPatience") == 0) {
+      validationPatience = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-thread") == 0) {
       thread = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-maxNegSamples") == 0) {
@@ -166,6 +176,8 @@ void Args::parseArgs(int argc, char** argv) {
       ngrams = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-K") == 0) {
       K = atoi(argv[i + 1]);
+    } else if (strcmp(argv[i], "-batchSize") == 0) {
+      batchSize = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-trainMode") == 0) {
       trainMode = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-verbose") == 0) {
@@ -234,6 +246,10 @@ void Args::parseArgs(int argc, char** argv) {
     cerr << "Unsupported file format type. Should be either fastText or labelDoc.\n";
     exit(EXIT_FAILURE);
   }
+  if (!(compressFile.empty() || compressFile == "gzip")) {
+    cerr << "Currently only support gzip for compressedFile.\n";
+    exit(EXIT_FAILURE);
+  }
 }
 
 void Args::printHelp() {
@@ -255,6 +271,8 @@ void Args::printHelp() {
        << "  -initModel       if not empty, it loads a previously trained model in -initModel and carry on training.\n"
        << "  -trainMode       takes value in [0, 1, 2, 3, 4, 5], see Training Mode Section. [" << trainMode << "]\n"
        << "  -fileFormat      currently support 'fastText' and 'labelDoc', see File Format Section. [" << fileFormat << "]\n"
+       << "  -validationFile  validation file path\n"
+       << "  -validationPatience    number of iterations of validation where does not improve before we stop training [" << validationPatience << "]\n"
        << "  -saveEveryEpoch  save intermediate models after each epoch [" << saveEveryEpoch << "]\n"
        << "  -saveTempModel   save intermediate models after each epoch with an unique name including epoch number [" << saveTempModel << "]\n"
        << "  -lr              learning rate [" << lr << "]\n"
@@ -275,6 +293,7 @@ void Args::printHelp() {
        << "  -initRandSd      initial values of embeddings are randomly generated from normal distribution with mean=0, standard deviation=initRandSd. [" << initRandSd << "]\n"
        << "  -trainWord       whether to train word level together with other tasks (for multi-tasking). [" << trainWord << "]\n"
        << "  -wordWeight      if trainWord is true, wordWeight specifies example weight for word level training examples. [" << wordWeight << "]\n"
+       << "  -batchSize       size of mini batch in training. [" << batchSize << "]\n"
        << "\nThe following arguments for test are optional:\n"
        << "  -basedoc         file path for a set of labels to compare against true label. It is required when -fileFormat='labelDoc'.\n"
        << "                   In the case -fileFormat='fastText' and -basedoc is not provided, we compare true label with all other labels in the dictionary.\n"
@@ -284,9 +303,12 @@ void Args::printHelp() {
        <<  "\nThe following arguments are optional:\n"
        << "  -normalizeText   whether to run basic text preprocess for input files [" << normalizeText << "]\n"
        << "  -useWeight       whether input file contains weights [" << useWeight << "]\n"
+       << "  -weightSep       separator for word and weights [" << weightSep << "]\n"
        << "  -verbose         verbosity level [" << verbose << "]\n"
        << "  -debug           whether it's in debug mode [" << debug << "]\n"
        << "  -thread          number of threads [" << thread << "]\n"
+       << "  -compressFile    whether to load a compressed file [" << compressFile << "]\n"
+       << "  -numGzFile       number of compressed file to load [" << numGzFile << "]\n"
        << std::endl;
 }
 
@@ -296,15 +318,18 @@ void Args::printArgs() {
        << "dim: " << dim << endl
        << "epoch: " << epoch << endl
        << "maxTrainTime: " << maxTrainTime << endl
+       << "validationPatience: " << validationPatience << endl
        << "saveEveryEpoch: " << saveEveryEpoch << endl
        << "loss: " << loss << endl
        << "margin: " << margin << endl
        << "similarity: " << similarity << endl
        << "maxNegSamples: " << maxNegSamples << endl
        << "negSearchLimit: " << negSearchLimit << endl
+       << "batchSize: " << batchSize << endl
        << "thread: " << thread << endl
        << "minCount: " << minCount << endl
        << "minCountLabel: " << minCountLabel << endl
+       << "label: " << label << endl
        << "label: " << label << endl
        << "ngrams: " << ngrams << endl
        << "bucket: " << bucket << endl
@@ -313,7 +338,9 @@ void Args::printArgs() {
        << "fileFormat: " << fileFormat << endl
        << "normalizeText: " << normalizeText << endl
        << "dropoutLHS: " << dropoutLHS << endl
-       << "dropoutRHS: " << dropoutRHS << endl;
+       << "dropoutRHS: " << dropoutRHS << endl
+       << "useWeight: " << useWeight << endl
+       << "weightSep: " << weightSep << endl;
 }
 
 void Args::save(std::ostream& out) {
@@ -329,12 +356,14 @@ void Args::save(std::ostream& out) {
   out.write((char*) &(trainMode), sizeof(int));
   out.write((char*) &(shareEmb), sizeof(bool));
   out.write((char*) &(useWeight), sizeof(bool));
+  out.write((char*) &(weightSep), sizeof(char));
   size_t size = fileFormat.size();
   out.write((char*) &(size), sizeof(size_t));
   out.write((char*) &(fileFormat[0]), size);
   size = similarity.size();
   out.write((char*) &(size), sizeof(size_t));
   out.write((char*) &(similarity[0]), size);
+  out.write((char*) &(batchSize), sizeof(int));
 }
 
 void Args::load(std::istream& in) {
@@ -350,6 +379,7 @@ void Args::load(std::istream& in) {
   in.read((char*) &(trainMode), sizeof(int));
   in.read((char*) &(shareEmb), sizeof(bool));
   in.read((char*) &(useWeight), sizeof(bool));
+  in.read((char*) &(weightSep), sizeof(char));
   size_t size;
   in.read((char*) &(size), sizeof(size_t));
   fileFormat.resize(size);
@@ -357,6 +387,7 @@ void Args::load(std::istream& in) {
   in.read((char*) &(size), sizeof(size_t));
   similarity.resize(size);
   in.read((char*) &(similarity[0]), size);
+  in.read((char*) &(batchSize), sizeof(int));
 }
 
 }

@@ -1,10 +1,8 @@
 /**
- * Copyright (c) 2016-present, Facebook, Inc.
- * All rights reserved.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 
@@ -145,7 +143,7 @@ void StarSpace::initFromTsv(const string& filename) {
   vector<string> pieces;
   boost::split(pieces, line, boost::is_any_of("\t "));
   int dim = pieces.size() - 1;
-  if (args_->dim != dim) {
+  if ((int)(args_->dim) != dim) {
     args_->dim = dim;
     cout << "Setting dim from Tsv file to: " << dim << endl;
   }
@@ -169,6 +167,8 @@ void StarSpace::train() {
   float rate = args_->lr;
   float decrPerEpoch = (rate - 1e-9) / args_->epoch;
 
+  int impatience = 0;
+  float best_valid_err = 1e9;
   auto t_start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < args_->epoch; i++) {
     if (args_->saveEveryEpoch && i > 0) {
@@ -181,14 +181,23 @@ void StarSpace::train() {
     }
     cout << "Training epoch " << i << ": " << rate << ' ' << decrPerEpoch << endl;
     auto err = model_->train(trainData_, args_->thread,
-			     t_start,  i,
-			     rate, rate - decrPerEpoch);
+           t_start,  i,
+           rate, rate - decrPerEpoch);
     printf("\n ---+++ %20s %4d Train error : %3.8f +++--- %c%c%c\n",
            "Epoch", i, err,
            0xe2, 0x98, 0x83);
     if (validData_ != nullptr) {
       auto valid_err = model_->test(validData_, args_->thread);
-      cout << "Validation error: " << valid_err << endl;
+      cout << "\nValidation error: " << valid_err << endl;
+      if (valid_err > best_valid_err) {
+        impatience += 1;
+        if (impatience > args_->validationPatience) {
+          cout << "Ran out of Patience! Early stopping based on validation set." << endl;
+          break;
+        }
+      } else {
+        best_valid_err = valid_err;
+      }
     }
     rate -= decrPerEpoch;
 
@@ -237,7 +246,7 @@ Matrix<Real> StarSpace::getDocVector(const string& line, const string& sep) {
 MatrixRow StarSpace::getNgramVector(const string& phrase) {
   vector<string> tokens;
   boost::split(tokens, phrase, boost::is_any_of(string(" ")));
-  if (tokens.size() > args_->ngrams) {
+  if (tokens.size() > (unsigned int)(args_->ngrams)) {
     std::cerr << "Error! Input ngrams size is greater than model ngrams size.\n";
     exit(EXIT_FAILURE);
   }
@@ -339,7 +348,7 @@ void StarSpace::predictOne(
     vector<Predictions>& pred) {
   auto lhsM = model_->projectLHS(input);
   std::priority_queue<Predictions> heap;
-  for (int i = 0; i < baseDocVectors_.size(); i++) {
+  for (unsigned int i = 0; i < baseDocVectors_.size(); i++) {
     auto cur_score = model_->similarity(lhsM, baseDocVectors_[i]);
     heap.push({ cur_score, i });
   }
@@ -387,10 +396,10 @@ Metrics StarSpace::evaluateOne(
   int rank = 1;
   heap.push({ score, 0 });
 
-  for (int i = 0; i < baseDocVectors_.size(); i++) {
+  for (unsigned int i = 0; i < baseDocVectors_.size(); i++) {
     // in the case basedoc labels are not provided, all labels become basedoc,
     // and we skip the correct label for comparison.
-    if ((args_->basedoc.empty()) && (i == rhs[0].first - dict_->nwords())) {
+    if ((args_->basedoc.empty()) && ((int)i == rhs[0].first - dict_->nwords())) {
       continue;
     }
     auto cur_score = model_->similarity(lhsM, baseDocVectors_[i]);
