@@ -23,8 +23,8 @@ using namespace starspace;
 
 int main(int argc, char** argv) {
   shared_ptr<Args> args = make_shared<Args>();
-  if (argc < 6) {
-    cerr << "usage: " << argv[0] << " <model> k basedoc input_docs predictions_file\n";
+  if (argc < 7) {
+    cerr << "usage: " << argv[0] << " <model> <k> <basedoc> <input_docs> <predictions_file> <expiring_records>\n";
     return 1;
   }
   std::string model(argv[1]);
@@ -34,6 +34,8 @@ int main(int argc, char** argv) {
   args->basedoc = argv[3];
   string input_file(argv[4]);
   string output_file(argv[5]);
+  // command line param must be 0 (false) or 1 (true)
+  bool expiring(atoi(argv[6]));
 
   StarSpace sp(args);
   if (boost::algorithm::ends_with(args->model, ".tsv")) {
@@ -68,11 +70,16 @@ int main(int argc, char** argv) {
     Tokenizer tok(line, Separator);
     vec.assign(tok.begin(), tok.end());
 
-    out << vec.at(0) << "\t" << vec.at(1);
+    out << vec.at(0) << "\t";
+
+    if (expiring) 
+        out << vec.at(1);
+
     vector<Base> query_vec;
     sp.parseDoc(vec.at(2), query_vec, " ");
     vector<Predictions> predictions;
     sp.predictOneWithDocId(query_vec, predictions);
+
     for (int i = 0; i < predictions.size(); i++) {
       out << "\t";
       out << sp.idBaseDocs_[predictions[i].second].first;
